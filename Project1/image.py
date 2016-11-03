@@ -49,7 +49,7 @@ def region_of_interest(img, vertices):
     return masked_image
 
 
-def draw_lines(img, lines, color=[255, 0, 0], thickness=2):
+def draw_lines(img, lines, color=[0,255, 0], thickness=2):
     """
     NOTE: this is the function you might want to use as a starting point once you want to 
     average/extrapolate the line segments you detect to map out the full
@@ -86,13 +86,14 @@ def draw_lines(img, lines, color=[255, 0, 0], thickness=2):
               left_avg = left_avg+slope
               left_pts.append((x1,y1))
               left_pts.append((x2,y2))
+              print (x1,y1,x2,y2)
             else: 
               right_avg = right_avg+slope
               right_pts.append((x1,y1))
               right_pts.append((x2,y2))
 
 
-    sorted_left = sorted(left_pts,key=lambda tup: tup[1])
+    sorted_left     = sorted(left_pts,key=lambda tup: tup[1])
     sorted_right    = sorted(right_pts,key=lambda tup: tup[1])
 
     left  = np.array(sorted_left)
@@ -102,11 +103,16 @@ def draw_lines(img, lines, color=[255, 0, 0], thickness=2):
     lx = left[:,0]
     ly = left[:,1]
 
+   
+
     lz = np.polyfit(lx,ly,1)
     lf = np.poly1d(lz)
 
-    lx_new = np.linspace(lx[0],lx[-1],50,dtype=int)
+    lx_new = np.linspace(lx[0],lx[-1],50).astype(int)
     ly_new = lf(lx_new).astype(int)
+
+    #print (lx)
+    #print (lx_new)
 
     rx = right[:,0]
     ry = right[:,1]
@@ -122,10 +128,13 @@ def draw_lines(img, lines, color=[255, 0, 0], thickness=2):
     right_lines = list(zip(rx_new,ry_new))
 
 
-    for indx in range (1,50):
-        cv2.line(img,left_lines[indx-1], left_lines[indx],color,thickness)
-        cv2.line(img,right_lines[indx-1],right_lines[indx],color,thickness)
 
+    for indx in range (3,len(lx_new)):
+        cv2.line(img,left_lines[indx-1], left_lines[indx],color,thickness)
+        print (left_lines[indx-1],left_lines[indx])
+
+    for indx in range (3,len(ly_new)):
+        cv2.line(img,right_lines[indx-1],right_lines[indx],color,thickness)
 
 def hough_lines(img, rho, theta, threshold, min_line_len, max_line_gap):
     """
@@ -135,7 +144,15 @@ def hough_lines(img, rho, theta, threshold, min_line_len, max_line_gap):
     """
     lines = cv2.HoughLinesP(img, rho, theta, threshold, np.array([]), minLineLength=min_line_len, maxLineGap=max_line_gap)
     line_img = np.zeros((*img.shape, 3), dtype=np.uint8)
+    for line in lines:
+       for x1,y1, x2,y2 in line:
+          cv2.line(line_img,(x1,y1), (x2,y2),[255,0,0],10)
+
     draw_lines(line_img, lines)
+    line_img = region_of_interest (line_img,vertices)
+    
+    plt.imshow(line_img)
+    plt.show()
     return line_img
 
 # Python 3 has support for cool math symbols.
