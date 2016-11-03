@@ -3,11 +3,10 @@ import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import numpy as np
 import cv2
+import os 
+
 from moviepy.editor import VideoFileClip
 from IPython.display import HTML
-
-
-
 
 def grayscale(img):
     """Applies the Grayscale transform
@@ -75,6 +74,8 @@ def draw_lines(img, lines, color=[255, 0, 0], thickness=2):
     left_pts = []
     right_pts= []
 
+    #print (lines)
+
     for line in lines: 
         for x1,y1,x2,y2 in line:
             slope = (y2 - y1)/(x2 - x1)
@@ -92,8 +93,8 @@ def draw_lines(img, lines, color=[255, 0, 0], thickness=2):
               right_pts.append((x2,y2))
 
 
-    sorted_left = sorted(left_pts,key=lambda tup: tup[1])
-    sorted_right    = sorted(right_pts,key=lambda tup: tup[1])
+    sorted_left  = sorted(left_pts, key=lambda tup: tup[1])
+    sorted_right = sorted(right_pts,key=lambda tup: tup[1])
 
     left  = np.array(sorted_left)
     right = np.array(sorted_right)
@@ -102,7 +103,7 @@ def draw_lines(img, lines, color=[255, 0, 0], thickness=2):
     lx = left[:,0]
     ly = left[:,1]
 
-    lz = np.polyfit(lx,ly,1)
+    lz = np.polyfit(lx,ly,2)
     lf = np.poly1d(lz)
 
     lx_new = np.linspace(lx[0],lx[-1],50,dtype=int)
@@ -179,13 +180,12 @@ def process_image(image):
     blur_gray = gaussian_blur(gray, kernel_size)
     edges     = canny(blur_gray,low_threshold,high_threshold)
     imshape   = image.shape
-    vertices  = np.array([[(0,imshape[0]),((imshape[1]/2)-1, imshape[0]/2),((imshape[1]/2)+1,imshape[0]/2),(imshape[1],imshape[0])]], dtype=np.int32)
+    vertices  = np.array([[(0,imshape[0]),((imshape[1]/2)- 10, imshape[0]/2 + 10),((imshape[1]/2)+10,imshape[0]/2+10),(imshape[1],imshape[0])]], dtype=np.int32)
 
     masked_edges = region_of_interest(edges, vertices)
 
     line_image = hough_lines(masked_edges, rho, theta, threshold, min_line_length, max_line_gap)
     result     = weighted_img(line_image, image, 0.8, 1, 0)
-
 
     return result
 
