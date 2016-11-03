@@ -111,7 +111,7 @@ def draw_lines(img, lines, color=[255, 0, 0], thickness=2):
     rx = right[:,0]
     ry = right[:,1]
 
-    rz = np.polyfit(rx,ry,1)
+    rz = np.polyfit(rx,ry,2)
     rf = np.poly1d(rz)
 
     rx_new = np.linspace(rx[0],rx[-1],50,dtype=int)
@@ -122,8 +122,10 @@ def draw_lines(img, lines, color=[255, 0, 0], thickness=2):
     right_lines = list(zip(rx_new,ry_new))
 
 
-    for indx in range (1,50):
+    for indx in range (3,len(lx_new)):
         cv2.line(img,left_lines[indx-1], left_lines[indx],color,thickness)
+
+    for indx in range (3,len(rx_new)):
         cv2.line(img,right_lines[indx-1],right_lines[indx],color,thickness)
 
 
