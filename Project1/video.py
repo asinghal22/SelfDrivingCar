@@ -66,15 +66,9 @@ def draw_lines(img, lines, color=[255, 0, 0], thickness=2):
     this function with the weighted_img() function below
     """
     ## Iterate over the output "lines" and draw lines on a blank image
-    left_avg  = 0
-    right_avg = 0
-
-    l = 0
-    r = 0
     left_pts = []
     right_pts= []
 
-    #print (lines)
 
     for line in lines: 
         for x1,y1,x2,y2 in line:
@@ -84,11 +78,9 @@ def draw_lines(img, lines, color=[255, 0, 0], thickness=2):
                continue
 
             if slope < 0:
-              left_avg = left_avg+slope
               left_pts.append((x1,y1))
               left_pts.append((x2,y2))
             else: 
-              right_avg = right_avg+slope
               right_pts.append((x1,y1))
               right_pts.append((x2,y2))
 
@@ -99,35 +91,35 @@ def draw_lines(img, lines, color=[255, 0, 0], thickness=2):
     left  = np.array(sorted_left)
     right = np.array(sorted_right)
 
+    if(len(left) > 0) :
 
-    lx = left[:,0]
-    ly = left[:,1]
+      lx = left[:,0]
+      ly = left[:,1]
 
-    lz = np.polyfit(lx,ly,2)
-    lf = np.poly1d(lz)
+      lz = np.polyfit(lx,ly,1)
+      lf = np.poly1d(lz)
 
-    lx_new = np.linspace(lx[0],lx[-1],50,dtype=int)
-    ly_new = lf(lx_new).astype(int)
+      lx_new      = np.linspace(lx[0],lx[-1],50,dtype=int)
+      ly_new      = lf(lx_new).astype(int)
+      left_lines  = list(zip(lx_new,ly_new))
 
-    rx = right[:,0]
-    ry = right[:,1]
+      for indx in range (1,len(lx_new)):
+          cv2.line(img,left_lines[indx-1], left_lines[indx],color,thickness)
 
-    rz = np.polyfit(rx,ry,2)
-    rf = np.poly1d(rz)
+    if(len(right) > 0) : 
+      rx = right[:,0]
+      ry = right[:,1]
 
-    rx_new = np.linspace(rx[0],rx[-1],50,dtype=int)
-    ry_new = rf(rx_new).astype(int)
+      rz = np.polyfit(rx,ry,1)
+      rf = np.poly1d(rz)
 
+      rx_new = np.linspace(rx[0],rx[-1],50,dtype=int)
+      ry_new = rf(rx_new).astype(int)
 
-    left_lines  = list(zip(lx_new,ly_new))
-    right_lines = list(zip(rx_new,ry_new))
+      right_lines = list(zip(rx_new,ry_new))
 
-
-    for indx in range (3,len(lx_new)):
-        cv2.line(img,left_lines[indx-1], left_lines[indx],color,thickness)
-
-    for indx in range (3,len(rx_new)):
-        cv2.line(img,right_lines[indx-1],right_lines[indx],color,thickness)
+      for indx in range (1,len(rx_new)):
+          cv2.line(img,right_lines[indx-1],right_lines[indx],color,thickness)
 
 
 def hough_lines(img, rho, theta, threshold, min_line_len, max_line_gap):
@@ -138,7 +130,7 @@ def hough_lines(img, rho, theta, threshold, min_line_len, max_line_gap):
     """
     lines = cv2.HoughLinesP(img, rho, theta, threshold, np.array([]), minLineLength=min_line_len, maxLineGap=max_line_gap)
     line_img = np.zeros((*img.shape, 3), dtype=np.uint8)
-    draw_lines(line_img, lines)
+    draw_lines(line_img, lines,[255,0,0],8)
     return line_img
 
 # Python 3 has support for cool math symbols.
@@ -169,22 +161,25 @@ def process_image(image):
     high_threshold    = 180
     rho               = 1 		   # distance resolution in pixels of the Hough grid
     theta             = np.pi/180 	   # angular resolution in radians of the Hough grid
-    threshold         = 8    	   	   # minimum number of votes (intersections in Hough grid cell)
-    min_line_length   = 10		   # minimum number of pixels making up a line
+    threshold         = 8  	   	   # minimum number of votes (intersections in Hough grid cell)
+    min_line_length   = 20		   # minimum number of pixels making up a line
     max_line_gap      = 10   		   # maximum gap in pixels between connectable line segments
     ignore_mask_color = 255   
 
-    #image = (mpimg.imread('test_images/whiteCarLaneSwitch.jpg')).astype('uint8')
     gray  = grayscale(image)
 
     blur_gray = gaussian_blur(gray, kernel_size)
     edges     = canny(blur_gray,low_threshold,high_threshold)
     imshape   = image.shape
-    vertices  = np.array([[(0,imshape[0]),((imshape[1]/2)- 10, imshape[0]/2 + 10),((imshape[1]/2)+10,imshape[0]/2+10),(imshape[1],imshape[0])]], dtype=np.int32)
+    vertices  = np.array([[(0,imshape[0]),((imshape[1]/2)- 20, imshape[0]*3/5 ),((imshape[1]/2)+20,imshape[0]*3/5),(imshape[1],imshape[0])]], dtype=np.int32)
 
     masked_edges = region_of_interest(edges, vertices)
 
     line_image = hough_lines(masked_edges, rho, theta, threshold, min_line_length, max_line_gap)
+
+ 
+    #line_image = region_of_interest (line_image, vertices)
+
     result     = weighted_img(line_image, image, 0.8, 1, 0)
 
     return result
@@ -192,7 +187,38 @@ def process_image(image):
 
 ################# main ##################
 
-white_output = 'white.mp4'
-clip1 = VideoFileClip("solidWhiteRight.mp4")
-white_clip = clip1.fl_image(process_image) #NOTE: this function expects color images!!
-white_clip.write_videofile(white_output, audio=False)
+#white_output = 'white.mp4'
+#clip1 = VideoFileClip("solidWhiteRight.mp4")
+#white_clip = clip1.fl_image(process_image) 
+#white_clip.write_videofile(white_output, audio=False)
+
+#white_output = 'yellow.mp4'
+#clip1 = VideoFileClip("solidYellowLeft.mp4")
+#white_clip = clip1.fl_image(process_image) 
+#white_clip.write_videofile(white_output, audio=False)
+
+#white_output = 'challenge_out.mp4'
+#clip1 = VideoFileClip("challenge.mp4")
+#white_clip = clip1.fl_image(process_image) 
+#white_clip.write_videofile(white_output, audio=False)
+
+
+image = (mpimg.imread('test_images/whiteCarLaneSwitch.jpg')).astype('uint8')
+image_out = process_image(image)
+cv2.imwrite('whiteCarLaneSwitch_Out.jpg',image_out)
+
+image = (mpimg.imread('test_images/solidWhiteCurve.jpg')).astype('uint8')
+image_out = process_image(image)
+cv2.imwrite('solidWhiteCurve_Out.jpg',image_out)
+
+image = (mpimg.imread('test_images/solidYellowCurve.jpg')).astype('uint8')
+image_out = process_image(image)
+cv2.imwrite('solidYellowCurve_Out.jpg',image_out)
+
+image = (mpimg.imread('test_images/solidYellowLeft.jpg')).astype('uint8')
+image_out = process_image(image)
+cv2.imwrite('solidYellowLeft_Out.jpg',image_out)
+
+image = (mpimg.imread('test_images/solidWhiteRight.jpg')).astype('uint8')
+image_out = process_image(image)
+cv2.imwrite('solidWhiteRight_Out.jpg',image_out)
